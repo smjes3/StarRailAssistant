@@ -822,23 +822,32 @@ class calculated:
             time.sleep(dt)
 
     def open_map(self, open_key):
+        map_confirm = False
         while True:
             start_time = time.time()
             if self.platform == _("PC"):
                 self.keyboard.press(open_key)
                 time.sleep(0.3) # 修复地图无法打开的问题
                 self.keyboard.release(open_key)
-                time.sleep(1)
+                #time.sleep(1)
             elif self.platform == _("模拟器"):
                 self.img_click((132, 82))
                 time.sleep(0.3) # 防止未打开地图
                 self.img_click((132, 82))
-            map_status = self.part_ocr((3,2,10,10)) if self.platform == _("PC") else self.part_ocr((6,2,10,6))
-            if self.check_list(_(".*导.*"), map_status):
-                log.info(_("进入地图"))
-                break
-            if time.time() - start_time > 10:
-                log.info(_("识别超时"))
+            # 兼容不同设备的打开地图黑屏时间，防止不断开关地图
+            while True:
+                time.sleep(0.3) # 每次检测OCR的间隔时间与初始时间
+                map_status = self.part_ocr((3,2,10,10)) if self.platform == _("PC") else self.part_ocr((6,2,10,6))
+                if self.check_list(_(".*导.*"), map_status):
+                    log.info(_("进入地图"))
+                    log.info(_("识别到地图打开的时间=") + str(time.time() - start_time))
+                    map_confirm = True
+                    break
+                if time.time() - start_time > 4:
+                    log.info(_("识别超时"))
+                    break
+            # 检测到地图打开或超时10秒后退出
+            if map_confirm == True or time.time() - start_time > 20:
                 break
 
     def teleport(self, key, value, threshold=0.95):
